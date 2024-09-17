@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
 	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "application/json")
 	return json.NewEncoder(w).Encode(v)
 }
 
@@ -31,17 +32,21 @@ func makeHttpHandleFunc(f apiFunc) http.HandlerFunc {
 
 type APIServer struct {
 	listenAddr string
+	storage Storage
 }
 
-func NewAPIServer(listenAddr string) *APIServer {
+func NewAPIServer(listenAddr string, storage Storage) *APIServer {
 	return &APIServer{
 		listenAddr: listenAddr,
+		storage: storage,
 	}
 }
 
 func (s *APIServer) Run() {
 	router := mux.NewRouter()
+	
 	router.HandleFunc("/review", makeHttpHandleFunc(s.handleReview))
+	router.HandleFunc("/review/:id", makeHttpHandleFunc(s.handleGetReview))
 
 	log.Println("Server Running on port: ", s.listenAddr)
 
@@ -65,12 +70,24 @@ func (s *APIServer) handleReview(w http.ResponseWriter,r *http.Request) error {
 }
 
 func (s *APIServer) handleGetReview(w http.ResponseWriter, r *http.Request) error {
-	review := NewReview("Requiem for A Dream", "NewDirector", 1999, 4.5, "Great")
-	return WriteJSON(w, http.StatusOK, review)
+	id := mux.Vars(r)["id"]
+	fmt.Println("Review Id:", id)
+	// db.get (id)
+	return WriteJSON(w, http.StatusOK, &Review{})
 }
 
 func (s *APIServer) handleCreateReview(w http.ResponseWriter,r *http.Request) error {
-	review := NewReview("Requiem for A Dream", "NewDirector", 1999, 4.5, "Great")
+	dateLayout := "2006-01-02 15:04:05"
+	title := mux.Vars(r)["title"]
+	director := mux.Vars(r)["director"]
+	releaseDateAsString := mux.Vars(r)["releaseDate"]
+	rating := mux.Vars(r)["rating"]
+	releaseDateAsDate, err := time.Parse(dateLayout, releaseDateAsString)
+	if err != nil {
+		fmt.Println("releaseDateInvalid: ",err)
+    }
+	reviewNotes := mux.Vars(r)["reviewNotes"]
+	review := NewReview(title, director, releaseDateAsDate.String(), rating, reviewNotes)
 	return WriteJSON(w, http.StatusOK, review)
 }
 
