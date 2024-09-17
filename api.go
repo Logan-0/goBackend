@@ -16,6 +16,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 }
 
 type apiFunc func(http.ResponseWriter, *http.Request) error
+
 type ApiError struct {
 	Error string
 }
@@ -69,7 +70,8 @@ func (s *APIServer) handleGetReview(w http.ResponseWriter, r *http.Request) erro
 }
 
 func (s *APIServer) handleCreateReview(w http.ResponseWriter,r *http.Request) error {
-	return nil
+	review := NewReview("Requiem for A Dream", "NewDirector", 1999, 4.5, "Great")
+	return WriteJSON(w, http.StatusOK, review)
 }
 
 func (s *APIServer) handleDeleteReview(w http.ResponseWriter,r *http.Request) error {
