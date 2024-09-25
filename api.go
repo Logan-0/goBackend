@@ -92,9 +92,9 @@ func (s *APIServer) handleCreateReview(w http.ResponseWriter,r *http.Request) er
 }
 
 func (s *APIServer) handleDeleteReview(w http.ResponseWriter,r *http.Request) error {
-	return nil
+	return WriteJSON(w, http.StatusOK, r)
 }
 
 func (s *APIServer) handleTransportReview(w http.ResponseWriter,r *http.Request) error {
-	return nil
+	return WriteJSON(w, http.StatusOK, r)
 }

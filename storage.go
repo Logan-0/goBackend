@@ -14,12 +14,12 @@ type Storage interface {
 	GetReviewById(int) (*Review, error)
 }
 
-type PostgreStorage struct {
+type PostgresStorage struct {
 	db *sql.DB
 }
 
-func NewPostgresStorage() (*PostgreStorage, error) {
-	connectString := ""
+func NewPostgresStorage() (*PostgresStorage, error) {
+	connectString := "user=postgres password=postgres dbname=review_db sslmode=disable"
 	db, err := sql.Open("postgres", connectString)
 	if err != nil {
 		log.Fatal(err)
@@ -29,22 +29,46 @@ func NewPostgresStorage() (*PostgreStorage, error) {
 		return nil, err
 	}
 
-	return &PostgreStorage{
+	return &PostgresStorage{
 		db:db,
 	}, nil
 }
 
-
-func (s *PostgreStorage) CreateReview(*Review) error {
-	return nil
+func (s *PostgresStorage) Init() error {
+	return s.createReviewTable()
 }
 
-func (s *PostgreStorage) UpdateReview(*Review) error {
+func (s *PostgresStorage) createReviewTable() error {
+	query := `CREATE table reviews if not exists (
+		id serial primary key,
+		title varchar(75),
+		director varchar(75),
+		rating serial,
+		release_date,
+		review varchar(20000),
+	)`
+
+	_, err := s.db.Exec(query)
+	return err
+}
+
+func (s *PostgresStorage) dropReviewTable() error {
+	query := `DROP table reviews`
+
+	_, err := s.db.Exec(query)
+	return err
+}
+
+func (s *PostgresStorage) CreateReview(*Review) error {
 	return nil
 }
-func (s *PostgreStorage) DeleteReview(id int) error {
+
+func (s *PostgresStorage) UpdateReview(*Review) error {
 	return nil
 }
-func (s *PostgreStorage) GetReviewById(id int) (*Review, error){
+func (s *PostgresStorage) DeleteReview(id int) error {
+	return nil
+}
+func (s *PostgresStorage) GetReviewById(id int) (*Review, error){
 	return nil, nil
 }
