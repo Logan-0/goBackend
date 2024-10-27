@@ -1,11 +1,14 @@
 package main
 
 import (
-	"database/sql"
+	"fmt"
 	"log"
 
+	"github.com/gocql/gocql"
 	_ "github.com/lib/pq"
 )
+
+var session *gocql.Session
 
 type Storage interface {
 	CreateReview(*Review) error
@@ -14,61 +17,76 @@ type Storage interface {
 	GetReviewById(int) (*Review, error)
 }
 
-type PostgresStorage struct {
-	db *sql.DB
+type Client struct {
+	cassandraSession *gocql.Session
 }
 
-func NewPostgresStorage() (*PostgresStorage, error) {
-	connectString := "user=postgres password=postgres dbname=review_db sslmode=disable"
-	db, err := sql.Open("postgres", connectString)
+func InitializeClientAndDB() *Client {
+    cluster := gocql.NewCluster("127.0.0.1")
+	if cluster == nil {
+		log.Fatal("Failed Create Cassandra Cluster")
+	}
+    cluster.Consistency = gocql.Quorum
+    cluster.Keyspace = "reviewKeyspace"
+    session,err := cluster.CreateSession()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed Create Cassandra Session")
 	}
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return &PostgresStorage{
-		db:db,
-	}, nil
+    return &Client{cassandraSession: session}
 }
 
-func (s *PostgresStorage) Init() error {
-	return s.createReviewTable()
-}
-
-func (s *PostgresStorage) createReviewTable() error {
-	query := `CREATE table reviews if not exists (
-		id serial primary key,
-		title varchar(75),
-		director varchar(75),
+func (cassandraClient *Client) CreateReviewTable() error {
+	session = cassandraClient.cassandraSession
+	createReviewDatabaseAndTableQuery := 
+	`CREATE KEYSPACE dev WITH replication = {'class':'SimpleStrategy', 'replication_factor' : 1};
+	
+	use dev;
+	
+	CREATE TABLE dev.reviews IF NOT EXISTS (
+		id serial,
+		title text,
+		director text,
 		rating serial,
-		release_date,
-		review varchar(20000),
-	)`
+		release_date text,
+		review text,
+		PRIMARY KEY(id));
+		
+	CREATE INDEX on dev.reviews(id);`
 
-	_, err := s.db.Exec(query)
-	return err
-}
-
-func (s *PostgresStorage) dropReviewTable() error {
-	query := `DROP table reviews`
-
-	_, err := s.db.Exec(query)
-	return err
-}
-
-func (s *PostgresStorage) CreateReview(*Review) error {
+	err := session.Query(createReviewDatabaseAndTableQuery).Exec()
+	if err != nil {
+		return err
+	}
+	fmt.Println("********************** Success Create Review Table")
 	return nil
 }
 
-func (s *PostgresStorage) UpdateReview(*Review) error {
+func (cassandraClient *Client) DropReviewTable() error {
+	session = cassandraClient.cassandraSession
+	dropTableQuery := `DROP TABLE reviews`
+	err := session.Query(dropTableQuery).Exec()
+	if err != nil {
+		fmt.Println("********************** Failed Drop Review Table")
+		return err
+	}
+	fmt.Println("********************** Success Drop Review Table")
 	return nil
 }
-func (s *PostgresStorage) DeleteReview(id int) error {
+
+func (cassandraClient *Client) CreateReview(*Review) error {
+	session = cassandraClient.cassandraSession
 	return nil
 }
-func (s *PostgresStorage) GetReviewById(id int) (*Review, error){
+
+func (cassandraClient *Client) UpdateReview(*Review) error {
+	session = cassandraClient.cassandraSession
+	return nil
+}
+func (cassandraClient *Client) DeleteReview(id int) error {
+	session = cassandraClient.cassandraSession
+	return nil
+}
+func (cassandraClient *Client) GetReviewById(id int) (*Review, error){
+	session = cassandraClient.cassandraSession
 	return nil, nil
 }

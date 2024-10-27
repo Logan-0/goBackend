@@ -10,10 +10,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func WriteJSON(w http.ResponseWriter, status int, v any) error {
-	w.WriteHeader(status)
-	w.Header().Add("Content-Type", "application/json")
-	return json.NewEncoder(w).Encode(v)
+func WriteJSON(writer http.ResponseWriter, status int, anyVar any) error {
+	writer.WriteHeader(status)
+	writer.Header().Add("Content-Type", "application/json")
+	return json.NewEncoder(writer).Encode(anyVar)
 }
 
 type apiFunc func(http.ResponseWriter, *http.Request) error
@@ -22,79 +22,85 @@ type ApiError struct {
 	Error string
 }
 
-func makeHttpHandleFunc(f apiFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := f(w, r); err != nil {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Error: err.Error()})
+func makeHttpHandleFunc(function apiFunc) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		if err := function(writer, request); err != nil {
+			WriteJSON(writer, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
 	}
 }
 
 type APIServer struct {
 	listenAddr string
-	storage Storage
 }
 
-func NewAPIServer(listenAddr string, storage Storage) *APIServer {
-	return &APIServer{
-		listenAddr: listenAddr,
-		storage: storage,
-	}
-}
+func RunNewServer(listenAddr string) {
 
-func (s *APIServer) Run() {
+	// Create Router and Server listenAddr -> Port
 	router := mux.NewRouter()
+	server := &APIServer{
+		listenAddr: listenAddr,
+	}
 	
-	router.HandleFunc("/review", makeHttpHandleFunc(s.handleReview))
-	router.HandleFunc("/review/:id", makeHttpHandleFunc(s.handleGetReview))
+	router.HandleFunc("/review", makeHttpHandleFunc(server.handleReview))
+	router.HandleFunc("/review/:id", makeHttpHandleFunc(server.handleGetReview))
 
-	log.Println("Server Running on port: ", s.listenAddr)
-
-	http.ListenAndServe(s.listenAddr, router)
+	err := http.ListenAndServe(server.listenAddr, router)
+	if err != nil {
+		log.Fatal("Failed To Listen and Serve On Port: " + listenAddr)
+	}
+	fmt.Println("Server Running on Port: ", server.listenAddr)
 }
 
-func (s *APIServer) handleReview(w http.ResponseWriter,r *http.Request) error {
-	method := r.Method
+func (server *APIServer) handleReview(writer http.ResponseWriter,request *http.Request) error {
+	method := request.Method
 	switch method {
 		case "GET":
-			return s.handleGetReview(w, r)
+			return server.handleGetReview(writer, request)
 		case "POST": 
-			return s.handleCreateReview(w, r)
+			return server.handleCreateReview(writer, request)
 		case "DELETE": 
-			return s.handleDeleteReview(w, r)
+			return server.handleDeleteReview(writer, request)
 		case "PUT":
-			return s.handleTransportReview(w, r)
+			return server.handleTransportReview(writer, request)
 		default:
-			return fmt.Errorf("method_Denied %s", r.Method)
+			return fmt.Errorf("method_Denied %server", request.Method)
 		}
 }
 
-func (s *APIServer) handleGetReview(w http.ResponseWriter, r *http.Request) error {
-	id := mux.Vars(r)["id"]
+func (server *APIServer) handleGetReview(writer http.ResponseWriter, request *http.Request) error {
+	id := mux.Vars(request)["id"]
 	fmt.Println("Review Id:", id)
-	// db.get (id)
-	return WriteJSON(w, http.StatusOK, &Review{})
+	// TODO: db.get (id)
+
+	// if err != null {
+	// 	log.Println("Error returning Review Id:", id)
+	// } else {
+	// log.Println("Review Id Returned:", id)
+	// }
+	return WriteJSON(writer, http.StatusOK, &Review{})
 }
 
-func (s *APIServer) handleCreateReview(w http.ResponseWriter,r *http.Request) error {
+func (server *APIServer) handleCreateReview(writer http.ResponseWriter,request *http.Request) error {
 	dateLayout := "2006-01-02 15:04:05"
-	title := mux.Vars(r)["title"]
-	director := mux.Vars(r)["director"]
-	releaseDateAsString := mux.Vars(r)["releaseDate"]
-	rating := mux.Vars(r)["rating"]
+	vars := mux.Vars(request)
+	title := vars["title"]
+	director := vars["director"]
+	releaseDateAsString := vars["releaseDate"]
+	rating := vars["rating"]
 	releaseDateAsDate, err := time.Parse(dateLayout, releaseDateAsString)
 	if err != nil {
 		fmt.Println("releaseDateInvalid: ",err)
     }
-	reviewNotes := mux.Vars(r)["reviewNotes"]
+	reviewNotes := vars["reviewNotes"]
 	review := NewReview(title, director, releaseDateAsDate.String(), rating, reviewNotes)
-	return WriteJSON(w, http.StatusOK, review)
+	return WriteJSON(writer, http.StatusOK, review)
 }
 
-func (s *APIServer) handleDeleteReview(w http.ResponseWriter,r *http.Request) error {
-	return WriteJSON(w, http.StatusOK, r)
+func (server *APIServer) handleDeleteReview(writer http.ResponseWriter,request *http.Request) error {
+	return WriteJSON(writer, http.StatusOK, request)
 }
 
-func (s *APIServer) handleTransportReview(w http.ResponseWriter,r *http.Request) error {
-	return WriteJSON(w, http.StatusOK, r)
+func (server *APIServer) handleTransportReview(writer http.ResponseWriter,request *http.Request) error {
+	return WriteJSON(writer, http.StatusOK, request)
 }

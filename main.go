@@ -1,20 +1,22 @@
 package main
 
 import (
-	"log"
+	"fmt"
 )
 
 func main() {
-	storage, err := NewPostgresStorage()
+
+	// Initialize Database
+	client := InitializeClientAndDB()
+	fmt.Println("********************** Success Create Cassandra Session")
+	
+	// Initialize Keyspace and Database Table
+	err := client.CreateReviewTable();
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("********************** Success Create Review Table")
 	}
 
-	if err := storage.Init(); err != nil {
-		log.Fatal(err)
-	}
-
-	server := NewAPIServer(":3000", storage)
-	server.Run()
+	// Initialize Server
+	RunNewServer(":8080")
+	fmt.Println("********************** Success Create Server")
 }
-
