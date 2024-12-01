@@ -25,20 +25,18 @@ type Review struct{
 
 func NewReview(title string, director string, releaseDate string, rating string, reviewNotes string) *Review {
 	dateTime, err := time.Parse(time.RFC822, releaseDate)
-	createdAtTime := time.Now().Format(time.RFC822)
-
-	dateString := dateTime.String()[0:19]
-	createdAtString := createdAtTime[0:19]
-
-	if err != nil { 
-		fmt.Println("********************** Failed: Ping DB: %w",err)
+	dateString := dateTime.Format(time.RFC822)[0:19]
+	createdAtTime := time.Now().Format(time.RFC822)[0:19]
+	if err != nil {
+		fmt.Println("Failed to Parse Date: Format 01 Jan 22 00:00 UTC You put: %w", err)
 	}
+
 	return &Review {
 		Title: title,
 		Director: director,
 		ReleaseDate: dateString,
 		Rating: rating,
 		ReviewNotes: reviewNotes,
-		CreatedAt: createdAtString,
+		CreatedAt: createdAtTime,
 	}
 }

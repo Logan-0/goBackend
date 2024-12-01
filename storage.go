@@ -29,7 +29,7 @@ const (
 func InitializeClientAndDB() (*PgDb, error) {
 	// Connection string
 	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	
 	// Open a connection to the database
 	db, err := sql.Open("postgres", connStr)
@@ -46,7 +46,7 @@ func InitializeClientAndDB() (*PgDb, error) {
 }
 
 func (pg *PgDb) CreateReviewTable() error {
-	createTableQuery := `CREATE TABLE IF NOT EXISTS public.reviewtable (
+	createTableQuery := `CREATE TABLE IF NOT EXISTS public.reviews (
 	id SERIAL PRIMARY KEY,
 	title VARCHAR NOT NULL,
 	director VARCHAR NOT NULL,
@@ -65,7 +65,7 @@ func (pg *PgDb) CreateReviewTable() error {
 }
 
 func (pg *PgDb) DropReviewTable() error {
-	dropTableQuery := `DROP TABLE reviewdb`
+	dropTableQuery := `DROP TABLE reviews`
 	_, err := pg.db.Query(dropTableQuery)
 	if err != nil {
 		fmt.Println("********************** Failed: Drop Review Table")
@@ -76,7 +76,7 @@ func (pg *PgDb) DropReviewTable() error {
 }
 
 func (pg *PgDb) CreateReview(review *Review) error {
-	createReviewQuery := `INSERT INTO public.reviewtable (
+	createReviewQuery := `INSERT INTO public.reviews (
 	title,director,releaseDate,rating,reviewNotes,createdAt
 	) VALUES ($1, $2, $3, $4, $5, $6);`
 
