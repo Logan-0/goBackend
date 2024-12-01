@@ -8,7 +8,7 @@ import (
 type CreateReviewRequest struct  {
 	Title string `json:"title"`
 	Director string `json:"director"`
-	ReleaseDate string `json:"realeaseDate"`
+	ReleaseDate string `json:"releaseDate"`
 	Rating string `json:"rating"`
 	ReviewNotes string `json:"reviewNotes"`
 }
@@ -17,7 +17,7 @@ type Review struct{
 	ID int `json:"id"`
 	Title string `json:"title"`
 	Director string `json:"director"`
-	ReleaseDate string `json:"realeaseDate"`
+	ReleaseDate string `json:"releaseDate"`
 	Rating string `json:"rating"`
 	ReviewNotes string `json:"reviewNotes"`
 	CreatedAt string `json:"createdAt"`
