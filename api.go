@@ -3,9 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -32,24 +30,24 @@ func makeHttpHandleFunc(function apiFunc) http.HandlerFunc {
 
 type APIServer struct {
 	listenAddr string
+	dbInstance Storage
 }
 
-func RunNewServer(listenAddr string) {
+func RunNewServer(listenAddr string, dbInstance Storage) error {
 
 	// Create Router and Server listenAddr -> Port
 	router := mux.NewRouter()
 	server := &APIServer{
 		listenAddr: listenAddr,
+		dbInstance: dbInstance,
 	}
 	
 	router.HandleFunc("/review", makeHttpHandleFunc(server.handleReview))
 	router.HandleFunc("/review/:id", makeHttpHandleFunc(server.handleGetReview))
+	router.HandleFunc("/createReview", makeHttpHandleFunc(server.handleCreateReview))
 
-	err := http.ListenAndServe(server.listenAddr, router)
-	if err != nil {
-		log.Fatal("Failed To Listen and Serve On Port: " + listenAddr)
-	}
-	fmt.Println("Server Running on Port: ", server.listenAddr)
+	// Always returns non-nil error
+	return http.ListenAndServe(server.listenAddr, router)
 }
 
 func (server *APIServer) handleReview(writer http.ResponseWriter,request *http.Request) error {
@@ -64,7 +62,7 @@ func (server *APIServer) handleReview(writer http.ResponseWriter,request *http.R
 		case "PUT":
 			return server.handleTransportReview(writer, request)
 		default:
-			return fmt.Errorf("method_Denied %server", request.Method)
+			return fmt.Errorf(`method denied %s failed`, request.Method)
 		}
 }
 
@@ -82,18 +80,21 @@ func (server *APIServer) handleGetReview(writer http.ResponseWriter, request *ht
 }
 
 func (server *APIServer) handleCreateReview(writer http.ResponseWriter,request *http.Request) error {
-	dateLayout := "2006-01-02 15:04:05"
-	vars := mux.Vars(request)
-	title := vars["title"]
-	director := vars["director"]
-	releaseDateAsString := vars["releaseDate"]
-	rating := vars["rating"]
-	releaseDateAsDate, err := time.Parse(dateLayout, releaseDateAsString)
-	if err != nil {
-		fmt.Println("releaseDateInvalid: ",err)
-    }
-	reviewNotes := vars["reviewNotes"]
-	review := NewReview(title, director, releaseDateAsDate.String(), rating, reviewNotes)
+	createReviewRequest := new(CreateReviewRequest)
+	if err := json.NewDecoder(request.Body).Decode(createReviewRequest); err != nil {
+		return err
+	}
+
+	review := NewReview(
+		createReviewRequest.Title,
+		createReviewRequest.Director,
+		createReviewRequest.ReleaseDate,
+		createReviewRequest.Rating,
+		createReviewRequest.ReviewNotes,
+	)
+	if err := server.dbInstance.CreateReview(review); err != nil {
+		return err;
+	}
 	return WriteJSON(writer, http.StatusOK, review)
 }
 

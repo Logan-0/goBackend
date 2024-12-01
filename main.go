@@ -2,21 +2,25 @@ package main
 
 import (
 	"fmt"
+	"log"
 )
 
 func main() {
-
 	// Initialize Database
-	client := InitializeClientAndDB()
-	fmt.Println("********************** Success Create Cassandra Session")
+	client, err := InitializeClientAndDB()
+	if err != nil {
+		log.Fatal("********************** Failed: Connection to Database")
+	}
+	fmt.Println("********************** Success: Database Port 5321")
 	
 	// Initialize Keyspace and Database Table
-	err := client.CreateReviewTable();
+	err = client.CreateReviewTable();
 	if err != nil {
-		fmt.Println("********************** Success Create Review Table")
+		log.Fatal("********************** Failed: Create Review Table" + err.Error())
 	}
+	fmt.Println("********************** Success: Create Review Table")
 
 	// Initialize Server
-	RunNewServer(":8080")
-	fmt.Println("********************** Success Create Server")
+	fmt.Println("********************** Success: Server Running 8080")
+	RunNewServer("0.0.0.0:8080", client)
 }
