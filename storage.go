@@ -19,50 +19,52 @@ type PgDb struct {
 }
 
 const (
-	port = 5432
-	host = "localhost"
-	user = "postgres"
+	port     = 5432
+	host     = "localhost"
+	user     = "postgres"
 	password = "test"
-	dbname = "reviewdb"
-	)
+	dbname   = "reviewdb"
+)
 
 func InitializeClientAndDB() (*PgDb, error) {
 	// Connection string
 	connStr := fmt.Sprintf(
-	"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
 	// Open a connection to the database
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("********************** Failed: Open Connection to PostgreSQL DB: %w", err)
 	}
-	
+
 	// Verify the connection
 	err = db.Ping()
 	if err != nil {
-		return nil, fmt.Errorf("********************** Failed: Ping DB: %w",err)
+		return nil, fmt.Errorf("********************** Failed: Ping DB: %w", err)
 	}
-    return &PgDb{db: db,}, nil
+	return &PgDb{db: db}, nil
 }
 
-func (pg *PgDb) CreateReviewTable() error {
-	createTableQuery := `CREATE TABLE IF NOT EXISTS public.reviews (
-	id SERIAL PRIMARY KEY,
-	title VARCHAR NOT NULL,
-	director VARCHAR NOT NULL,
-	rating VARCHAR NOT NULL,
-	releaseDate VARCHAR NOT NULL,
-	reviewNotes VARCHAR NOT NULL,
-	createdAt VARCHAR NOT NULL
-	);`
+// To be used after testing when Database when restarting dbs is no longer as simple.
 
-	_, err := pg.db.Exec(createTableQuery)
-	if err != nil {
-		return fmt.Errorf("********************** Failed: Create Review Table: %w",err)
-	}
+// func (pg *PgDb) CreateReviewTable() error {
+// 	createTableQuery := `CREATE TABLE IF NOT EXISTS public.reviews (
+// 	id SERIAL PRIMARY KEY,
+// 	title VARCHAR NOT NULL,
+// 	director VARCHAR NOT NULL,
+// 	rating VARCHAR NOT NULL,
+// 	releaseDate VARCHAR NOT NULL,
+// 	reviewNotes VARCHAR NOT NULL,
+// 	createdAt VARCHAR NOT NULL
+// 	);`
 
-	return nil
-}
+// 	_, err := pg.db.Exec(createTableQuery)
+// 	if err != nil {
+// 		return fmt.Errorf("********************** Failed: Create Review Table: %w",err)
+// 	}
+
+// 	return nil
+// }
 
 func (pg *PgDb) DropReviewTable() error {
 	dropTableQuery := `DROP TABLE reviews`
@@ -101,6 +103,6 @@ func (pg *PgDb) UpdateReview(*Review) error {
 func (pg *PgDb) DeleteReview(id int) error {
 	return nil
 }
-func (pg *PgDb) GetReviewById(id int) (*Review, error){
+func (pg *PgDb) GetReviewById(id int) (*Review, error) {
 	return nil, nil
 }
