@@ -14,11 +14,12 @@ func main() {
 	fmt.Println("********************** Success: Database Port 5321")
 
 	// Initialize Keyspace and Database Table
-	err = client.CreateReviewTable()
-	if err != nil {
-		log.Fatal("********************** Failed: Create Review Table" + err.Error())
-	}
-	fmt.Println("********************** Success: Create Review Table")
+	// To be Used Later after testing for devops debugging.
+	// err = client.CreateReviewTable()
+	// if err != nil {
+	// 	log.Fatal("********************** Failed: Create Review Table" + err.Error())
+	// }
+	// fmt.Println("********************** Success: Create Review Table")
 
 	// Initialize Server
 	fmt.Println("********************** Success: Server Running 8080")
