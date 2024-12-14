@@ -23,7 +23,7 @@ const (
 	host     = "localhost"
 	user     = "postgres"
 	password = "test"
-	dbname   = "reviewdb"
+	dbname   = "postgres"
 )
 
 func InitializeClientAndDB() (*PgDb, error) {
