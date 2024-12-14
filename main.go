@@ -9,12 +9,12 @@ func main() {
 	// Initialize Database
 	client, err := InitializeClientAndDB()
 	if err != nil {
-		log.Fatal("********************** Failed: Connection to Database")
+		log.Fatal("********************** Failed: Connection to Database ", err.Error())
 	}
 	fmt.Println("********************** Success: Database Port 5321")
-	
+
 	// Initialize Keyspace and Database Table
-	err = client.CreateReviewTable();
+	err = client.CreateReviewTable()
 	if err != nil {
 		log.Fatal("********************** Failed: Create Review Table" + err.Error())
 	}
