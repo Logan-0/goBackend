@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	_ "github.com/lib/pq"
 )
 
 type Storage interface {
-	CreateReview(*Review) error
-	UpdateReview(*Review) error
-	DeleteReview(int) error
-	GetReviewById(int) (*Review, error)
+	CreateReview(context.Context, *Review) error
+	UpdateReview(context.Context, *Review) error
+	DeleteReview(context.Context, int) error
+	GetReviewById(context.Context, int) (*Review, error)
 }
 
 type PgDb struct {
@@ -24,25 +26,45 @@ const (
 	user     = "postgres"
 	password = "test"
 	dbname   = "postgres"
+
+	// Connection pool settings
+	maxOpenConns    = 25
+	maxIdleConns    = 5
+	maxConnLifetime = 5 * time.Minute
+
+	// Context timeout settings
+	defaultTimeout = 10 * time.Second
 )
 
 func InitializeClientAndDB() (*PgDb, error) {
-	// Connection string
 	connStr := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	// Open a connection to the database
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("********************** Failed: Open Connection to PostgreSQL DB: %w", err)
 	}
 
+	// Configure connection pool
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(maxConnLifetime)
+
 	// Verify the connection
 	err = db.Ping()
 	if err != nil {
+		db.Close()
 		return nil, fmt.Errorf("********************** Failed: Ping DB: %w", err)
 	}
 	return &PgDb{db: db}, nil
+}
+
+// Cleanup closes the database connection pool
+func (pg *PgDb) Cleanup() error {
+	if err := pg.db.Close(); err != nil {
+		return fmt.Errorf("failed to close database connection: %w", err)
+	}
+	return nil
 }
 
 // To be used after testing when Database when restarting dbs is no longer as simple.
@@ -77,12 +99,15 @@ func (pg *PgDb) DropReviewTable() error {
 	return nil
 }
 
-func (pg *PgDb) CreateReview(review *Review) error {
+func (pg *PgDb) CreateReview(ctx context.Context, review *Review) error {
 	createReviewQuery := `INSERT INTO public.reviews (
 	title,director,releaseDate,rating,reviewNotes,createdAt
 	) VALUES ($1, $2, $3, $4, $5, $6);`
 
-	response, err := pg.db.Query(createReviewQuery,
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	_, err := pg.db.ExecContext(ctx, createReviewQuery,
 		review.Title,
 		review.Director,
 		review.ReleaseDate,
@@ -90,19 +115,67 @@ func (pg *PgDb) CreateReview(review *Review) error {
 		review.ReviewNotes,
 		review.CreatedAt)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create review: %w", err)
 	}
-
-	fmt.Printf("%+v", response)
 	return nil
 }
 
-func (pg *PgDb) UpdateReview(*Review) error {
+func (pg *PgDb) UpdateReview(ctx context.Context, review *Review) error {
+	updateReviewQuery := `UPDATE public.reviews 
+        SET title=$1, director=$2, releaseDate=$3, rating=$4, reviewNotes=$5 
+        WHERE id=$6`
+
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	_, err := pg.db.ExecContext(ctx, updateReviewQuery,
+		review.Title,
+		review.Director,
+		review.ReleaseDate,
+		review.Rating,
+		review.ReviewNotes,
+		review.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update review: %w", err)
+	}
 	return nil
 }
-func (pg *PgDb) DeleteReview(id int) error {
+
+func (pg *PgDb) DeleteReview(ctx context.Context, id int) error {
+	deleteReviewQuery := `DELETE FROM public.reviews WHERE id=$1`
+
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	_, err := pg.db.ExecContext(ctx, deleteReviewQuery, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete review: %w", err)
+	}
 	return nil
 }
-func (pg *PgDb) GetReviewById(id int) (*Review, error) {
-	return nil, nil
+
+func (pg *PgDb) GetReviewById(ctx context.Context, id int) (*Review, error) {
+	getReviewQuery := `SELECT id, title, director, releaseDate, rating, reviewNotes, createdAt 
+		FROM public.reviews WHERE id=$1`
+
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	review := &Review{}
+	err := pg.db.QueryRowContext(ctx, getReviewQuery, id).Scan(
+		&review.ID,
+		&review.Title,
+		&review.Director,
+		&review.ReleaseDate,
+		&review.Rating,
+		&review.ReviewNotes,
+		&review.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no review found with id %d", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get review: %w", err)
+	}
+	return review, nil
 }
