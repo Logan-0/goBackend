@@ -11,7 +11,7 @@ func main() {
 	if err != nil {
 		log.Fatal("********************** Failed: Connection to Database ", err.Error())
 	}
-	fmt.Println("********************** Success: Database Port 5321")
+	fmt.Println("********************** Success: Database Port 5432")
 
 	// Initialize Keyspace and Database Table
 	// To be Used Later after testing for devops debugging.

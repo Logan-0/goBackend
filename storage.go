@@ -10,7 +10,7 @@ import (
 )
 
 type Storage interface {
-	CreateReview(context.Context, *Review) error
+	CreateReview(context.Context, *Review) (string, error)
 	UpdateReview(context.Context, *Review) error
 	DeleteReview(context.Context, int) error
 	GetReviewById(context.Context, int) (*Review, error)
@@ -59,14 +59,6 @@ func InitializeClientAndDB() (*PgDb, error) {
 	return &PgDb{db: db}, nil
 }
 
-// Cleanup closes the database connection pool
-func (pg *PgDb) Cleanup() error {
-	if err := pg.db.Close(); err != nil {
-		return fmt.Errorf("failed to close database connection: %w", err)
-	}
-	return nil
-}
-
 // To be used after testing when Database when restarting dbs is no longer as simple.
 
 // func (pg *PgDb) CreateReviewTable() error {
@@ -99,9 +91,9 @@ func (pg *PgDb) DropReviewTable() error {
 	return nil
 }
 
-func (pg *PgDb) CreateReview(ctx context.Context, review *Review) error {
+func (pg *PgDb) CreateReview(ctx context.Context, review *Review) (string, error) {
 	createReviewQuery := `INSERT INTO public.reviews (
-	title,director,releaseDate,rating,reviewNotes,createdAt
+	title,director,releaseDate,rating,reviewNotes,dateCreated
 	) VALUES ($1, $2, $3, $4, $5, $6);`
 
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
@@ -113,11 +105,14 @@ func (pg *PgDb) CreateReview(ctx context.Context, review *Review) error {
 		review.ReleaseDate,
 		review.Rating,
 		review.ReviewNotes,
-		review.CreatedAt)
+		review.DateCreated)
+
 	if err != nil {
-		return fmt.Errorf("failed to create review: %w", err)
+		return "", fmt.Errorf("failed to create review: %w", err)
 	}
-	return nil
+
+	success := "Review Created :: Recorded In DB:: " + review.DateCreated
+	return success, nil
 }
 
 func (pg *PgDb) UpdateReview(ctx context.Context, review *Review) error {
@@ -151,11 +146,12 @@ func (pg *PgDb) DeleteReview(ctx context.Context, id int) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete review: %w", err)
 	}
+	fmt.Println("********************** Success: Deleted Review ", id)
 	return nil
 }
 
 func (pg *PgDb) GetReviewById(ctx context.Context, id int) (*Review, error) {
-	getReviewQuery := `SELECT id, title, director, releaseDate, rating, reviewNotes, createdAt 
+	getReviewQuery := `SELECT id, title, director, releaseDate, rating, reviewNotes, dateCreated 
 		FROM public.reviews WHERE id=$1`
 
 	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
@@ -169,11 +165,8 @@ func (pg *PgDb) GetReviewById(ctx context.Context, id int) (*Review, error) {
 		&review.ReleaseDate,
 		&review.Rating,
 		&review.ReviewNotes,
-		&review.CreatedAt)
+		&review.DateCreated)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("no review found with id %d", id)
-	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get review: %w", err)
 	}

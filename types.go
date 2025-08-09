@@ -20,7 +20,7 @@ type Review struct {
     ReleaseDate string `json:"releaseDate"`
     Rating      string `json:"rating"`
     ReviewNotes string `json:"reviewNotes"`
-    CreatedAt   string `json:"createdAt"`
+    DateCreated string `json:"dateCreated"`
 }
 
 func NewReview(title string, director string, releaseDate string, rating string, reviewNotes string) *Review {
@@ -32,7 +32,7 @@ func NewReview(title string, director string, releaseDate string, rating string,
     }
     
     dateString := dateTime.Format(time.RFC822)[0:19]
-    createdAtTime := time.Now().Format(time.RFC822)[0:19]
+    dateCreated := time.Now().Format(time.RFC822)[0:19]
 
     return &Review{
         Title:       title,
@@ -40,6 +40,6 @@ func NewReview(title string, director string, releaseDate string, rating string,
         ReleaseDate: dateString,
         Rating:      rating,
         ReviewNotes: reviewNotes,
-        CreatedAt:   createdAtTime,
+        DateCreated: dateCreated,
     }
 }
